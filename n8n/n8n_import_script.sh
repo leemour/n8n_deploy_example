@@ -20,4 +20,4 @@ find /backup/workflows -maxdepth 1 -type f -not -name '.gitkeep' -print -exec sh
   n8n import:workflow --input="$1" || echo "Error importing workflow file: $1"
 ' sh {} \;
 
-echo 'Import process finished.' 
+echo 'Import process finished.'
