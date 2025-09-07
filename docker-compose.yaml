@@ -8,19 +8,26 @@ volumes:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
 
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.25.0.0/24
+
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
   environment: &service-n8n-env
     DB_TYPE: postgresdb
     DB_POSTGRESDB_HOST: postgres
-    DB_POSTGRESDB_USER: postgres
+    DB_POSTGRESDB_USER: ${POSTGRES_USER}
     DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
-    DB_POSTGRESDB_DATABASE: postgres
+    DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
     N8N_DIAGNOSTICS_ENABLED: false
     N8N_PERSONALIZATION_ENABLED: false
     N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
     N8N_USER_MANAGEMENT_JWT_SECRET: ${N8N_USER_MANAGEMENT_JWT_SECRET}
-    WEBHOOK_URL: ${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}
+    WEBHOOK_URL: ${WEBHOOK_URL:-${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}}
     NODE_ENV: production
     EXECUTIONS_MODE: queue
     N8N_RUNNERS_ENABLED: true
@@ -122,14 +129,14 @@ services:
     image: postgres:${POSTGRES_VERSION:-latest}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s
       timeout: 3s
       retries: 10
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
 
@@ -186,7 +193,7 @@ services:
       clickhouse:
         condition: service_healthy
     environment: &langfuse-worker-env
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/langfuse
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/langfuse
       SALT: ${LANGFUSE_SALT}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
