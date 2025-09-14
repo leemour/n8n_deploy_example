@@ -15,15 +15,15 @@
     - "{{ apps_dir }}/shared"
     - "{{ apps_dir }}/shared/backups"
 
-- name: Create Docker volume directories with correct ownership
-  file:
-    path: "{{ item }}"
-    state: directory
-    mode: '0755'
-    owner: "1000"  # Docker container UID
-    group: "1000"  # Docker container GID
-  loop:
-    - "{{ apps_dir }}/shared/n8n_storage"
+# - name: Create Docker volume directories with correct ownership
+#   file:
+#     path: "{{ item }}"
+#     state: directory
+#     mode: '0755'
+#     owner: "1000"  # Docker container UID
+#     group: "1000"  # Docker container GID
+#   loop:
+#     - "{{ apps_dir }}/shared/n8n_storage"
 
 - name: Get current timestamp for release
   set_fact:
@@ -71,15 +71,15 @@
 
 - name: Create symlinks to shared files
   file:
-    src: "{{ apps_dir }}/shared/{{ item }}"
-    dest: "{{ release_path }}/{{ item }}"
+    src: "{{ apps_dir }}/shared/{{ item.name }}"
+    dest: "{{ release_path }}/{{ item.name }}"
     state: link
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
+    owner: "{{ item.owner | default(deploy_user) }}"
+    group: "{{ item.group | default(deploy_user) }}"
     force: yes
   loop:
-    - ".env"
-    - "n8n_storage"
+    - { name: ".env", owner: "{{ deploy_user }}", group: "{{ deploy_user }}" }
+    - { name: "n8n_storage", owner: "1000", group: "1000" }
 
 - name: Stop current services
   community.docker.docker_compose_v2:
