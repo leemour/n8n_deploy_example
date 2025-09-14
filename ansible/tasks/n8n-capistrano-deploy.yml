@@ -2,7 +2,7 @@
 # Capistrano-style deployment with Ansible
 # Code from git, configs from local machine
 
-- name: Create releases directory structure
+- name: Create standard deployment directories
   file:
     path: "{{ item }}"
     state: directory
@@ -13,8 +13,17 @@
     - "{{ apps_dir }}"
     - "{{ apps_dir }}/releases"
     - "{{ apps_dir }}/shared"
-    - "{{ apps_dir }}/shared/n8n_storage"
     - "{{ apps_dir }}/shared/backups"
+
+- name: Create Docker volume directories with correct ownership
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "1000"  # Docker container UID
+    group: "1000"  # Docker container GID
+  loop:
+    - "{{ apps_dir }}/shared/n8n_storage"
 
 - name: Get current timestamp for release
   set_fact:

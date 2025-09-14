@@ -9,6 +9,14 @@ n8n:
   enable_qdrant: false
   enable_crawl4ai: false
 
+# Qdrant Configuration (even if disabled, define for template)
+qdrant:
+  hostname: "qdrant.{{ server_domain }}"
+
+# Langfuse Configuration (even if disabled, define for template)
+langfuse:
+  hostname: "langfuse.{{ server_domain }}"
+
 # Resource limits for staging (lighter)
 resource_limits:
   n8n_memory: "1g"

@@ -12,6 +12,8 @@ networks:
     ipam:
       config:
         - subnet: 10.25.0.0/24
+  n8n-network:
+    external: true
 
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
@@ -58,6 +60,9 @@ services:
     <<: *service-n8n
     container_name: n8n
     restart: unless-stopped
+    networks:
+      - default
+      - n8n-network
     volumes:
       - ./n8n_storage:/home/node/.n8n
       - ./n8n/backup:/backup
@@ -87,6 +92,9 @@ services:
     image: qdrant/qdrant
     container_name: qdrant
     restart: unless-stopped
+    networks:
+      - default
+      - n8n-network
     volumes:
       - qdrant_storage:/qdrant/storage
     environment:
