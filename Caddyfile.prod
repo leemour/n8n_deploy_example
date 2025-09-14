@@ -3,16 +3,16 @@
     email {$LETSENCRYPT_EMAIL}
 }
 
-http://:7687 {
+#http://:7687 {
+#    reverse_proxy n8n:5678
+#}
+
+N8N
+{$N8N_HOSTNAME} {
+    # For domains, Caddy will automatically use Let's Encrypt
+    # For localhost/port addresses, HTTPS won't be enabled
     reverse_proxy n8n:5678
 }
-
-# N8N
-# {$N8N_HOSTNAME} {
-#     # For domains, Caddy will automatically use Let's Encrypt
-#     # For localhost/port addresses, HTTPS won't be enabled
-#     reverse_proxy n8n:5678
-# }
 
 # Qdrant
 {$QDRANT_HOSTNAME} {

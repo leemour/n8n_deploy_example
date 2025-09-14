@@ -52,6 +52,7 @@ dumps/
 Thumbs.db
 
 # Node.js (if any Node.js components are added)
+*.log
 node_modules/
 npm-debug.log*
 yarn-debug.log*
