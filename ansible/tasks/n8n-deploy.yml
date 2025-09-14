@@ -4,8 +4,8 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   loop:
     - "{{ apps_dir }}/n8n"
     - "{{ apps_dir }}/n8n/n8n_storage"
@@ -25,8 +25,8 @@
     src: ../templates/n8n-compose.yml.j2
     dest: "{{ apps_dir }}/n8n/docker-compose.yml"
     mode: '0644'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   notify: restart n8n
 
 - name: Template N8N environment file
@@ -34,8 +34,8 @@
     src: ../templates/n8n.env.j2
     dest: "{{ apps_dir }}/n8n/.env"
     mode: '0600'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   notify: restart n8n
 
 - name: Copy N8N import script
@@ -43,22 +43,21 @@
     src: ../templates/n8n_import_script.sh.j2
     dest: "{{ apps_dir }}/n8n/n8n/n8n_import_script.sh"
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
 
 - name: Deploy N8N stack
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/n8n"
     state: present
-    pull: yes
+    pull: always
     profiles: "{{ ['langfuse'] if n8n.enable_langfuse | default(false) else [] }}"
-  become_user: "{{ ansible_user }}"
 
 - name: Add N8N service configuration to global proxy
   template:
     src: ../templates/n8n-proxy.conf.j2
     dest: "{{ proxy_dir }}/addons/n8n.conf"
     mode: '0644'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   notify: restart global proxy

@@ -21,8 +21,8 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   loop:
     - "{{ apps_dir }}"
     - "{{ proxy_dir }}"
@@ -34,4 +34,3 @@
     driver: bridge
     ipam_config:
       - subnet: "10.20.0.0/24"
-  become_user: "{{ ansible_user }}"

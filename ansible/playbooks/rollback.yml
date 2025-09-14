@@ -1,7 +1,7 @@
 ---
 - name: Rollback N8N to Previous Release
   hosts: all
-  become: yes
+  remote_user: "{{ deploy_user }}"
 
   tasks:
     - name: Include rollback tasks

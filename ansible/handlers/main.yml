@@ -1,13 +1,11 @@
 ---
 - name: restart global proxy
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ proxy_dir }}"
     restarted: yes
-  become_user: "{{ ansible_user }}"
 
 - name: restart n8n
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/n8n"
     restarted: yes
     profiles: "{{ ['langfuse'] if n8n.enable_langfuse | default(false) else [] }}"
-  become_user: "{{ ansible_user }}"

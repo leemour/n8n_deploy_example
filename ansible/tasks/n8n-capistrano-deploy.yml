@@ -7,8 +7,8 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   loop:
     - "{{ apps_dir }}"
     - "{{ apps_dir }}/releases"
@@ -30,48 +30,52 @@
     dest: "{{ release_path }}"
     version: "{{ git_branch | default('main') }}"
     force: yes
-  become_user: "{{ ansible_user }}"
 
 - name: Copy local config files to shared directory
   copy:
     src: "{{ item.src }}"
     dest: "{{ apps_dir }}/shared/{{ item.dest }}"
     mode: "{{ item.mode }}"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   loop:
     - { src: "../configs/production.env", dest: ".env", mode: "0600" }
     - { src: "../configs/Caddyfile.production", dest: "Caddyfile", mode: "0644" }
-  when: ansible_hostname in groups['production']
+  when: inventory_hostname in groups['production']
 
 - name: Copy staging configs
   copy:
     src: "{{ item.src }}"
     dest: "{{ apps_dir }}/shared/{{ item.dest }}"
     mode: "{{ item.mode }}"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   loop:
     - { src: "../configs/staging.env", dest: ".env", mode: "0600" }
     - { src: "../configs/Caddyfile.staging", dest: "Caddyfile", mode: "0644" }
-  when: ansible_hostname in groups['staging']
+  when: inventory_hostname in groups['staging']
+
+- name: Remove n8n_storage directory from release if it exists
+  file:
+    path: "{{ release_path }}/n8n_storage"
+    state: absent
 
 - name: Create symlinks to shared files
   file:
     src: "{{ apps_dir }}/shared/{{ item }}"
     dest: "{{ release_path }}/{{ item }}"
     state: link
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    force: yes
   loop:
     - ".env"
     - "n8n_storage"
 
 - name: Stop current services
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
     state: absent
-  become_user: "{{ ansible_user }}"
   ignore_errors: yes
 
 - name: Update current symlink
@@ -79,19 +83,17 @@
     src: "{{ release_path }}"
     dest: "{{ apps_dir }}/current"
     state: link
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
 
 - name: Start new release
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
     state: present
-    pull: yes
-  become_user: "{{ ansible_user }}"
+    pull: always
 
 - name: Keep only last 5 releases
   shell: |
     cd {{ apps_dir }}/releases
     ls -t | tail -n +6 | xargs rm -rf
-  become_user: "{{ ansible_user }}"
   ignore_errors: yes

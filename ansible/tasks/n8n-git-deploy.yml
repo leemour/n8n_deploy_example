@@ -4,19 +4,18 @@
 
 - name: Clone or update N8N repository
   git:
-    repo: "https://github.com/leemour/n8n_deploy_example.git"
+    repo: "{{ repo_url }}.git"
     dest: "{{ apps_dir }}"
     version: "{{ git_branch | default('main') }}"
     force: yes
-  become_user: "{{ ansible_user }}"
 
 - name: Create additional directories not in git
   file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   loop:
     - "{{ apps_dir }}/n8n_storage"
     - "{{ apps_dir }}/n8n/backup/credentials"
@@ -34,23 +33,22 @@
     src: ../templates/n8n.env.j2
     dest: "{{ apps_dir }}/.env"
     mode: '0600'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   notify: restart n8n
 
 - name: Deploy N8N stack from git repository
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}"
     state: present
-    pull: yes
+    pull: always
     profiles: "{{ ['langfuse'] if n8n.enable_langfuse | default(false) else [] }}"
-  become_user: "{{ ansible_user }}"
 
 - name: Add N8N service configuration to global proxy
   template:
     src: ../templates/n8n-proxy.conf.j2
     dest: "{{ proxy_dir }}/addons/n8n.conf"
     mode: '0644'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
   notify: restart global proxy

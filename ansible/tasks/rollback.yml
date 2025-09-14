@@ -10,13 +10,11 @@
     cd {{ apps_dir }}/releases
     ls -t | head -n 2 | tail -n 1
   register: previous_release
-  become_user: "{{ ansible_user }}"
 
 - name: Stop current services
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
     state: absent
-  become_user: "{{ ansible_user }}"
   ignore_errors: yes
 
 - name: Switch to previous release
@@ -24,14 +22,11 @@
     src: "{{ apps_dir }}/releases/{{ previous_release.stdout }}"
     dest: "{{ apps_dir }}/current"
     state: link
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
 
 - name: Start previous release
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
     state: present
-  become_user: "{{ ansible_user }}"
 
 - name: Show rollback info
   debug:

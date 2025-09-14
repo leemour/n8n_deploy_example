@@ -1,5 +1,5 @@
 # Production environment variables
-environment: production
+env_name: production
 
 # N8N Configuration
 n8n:

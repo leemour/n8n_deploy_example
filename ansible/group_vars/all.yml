@@ -7,9 +7,9 @@ shared_docker_network: "n8n-network"
 
 # Common directories
 base_dir: "/srv/www"
-apps_dir: "{{ base_dir }}/n8n"
+apps_dir: "{{ base_dir }}/n8n_{{ group_names[0] }}"
 proxy_dir: "{{ base_dir }}/proxy"
-backups_dir: "/mnt/data/backups/n8n"
+backups_dir: "/mnt/data/backups/n8n_{{ group_names[0] }}"
 
 # Backup configuration
 backup_retention_days: 30

@@ -1,5 +1,9 @@
 # N8N Deployment Guide with Ansible
 
+1. Run `./pre-deploy-check.sh` to check the prerequisites
+2. Run `./ansible/server-setup.sh production` to setup the server
+3. Run `./ansible/deploy-capistrano.sh production` to deploy the application
+
 This guide explains how to deploy your N8N application to Ubuntu 24 servers using Ansible with a common proxy architecture.
 
 ## Architecture Overview

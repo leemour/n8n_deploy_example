@@ -19,9 +19,10 @@ fi
 
 # Install Ansible if not present
 if ! command -v ansible &> /dev/null; then
-    echo "Installing Ansible..."
-    sudo apt update
-    sudo apt install -y ansible
+    echo "❌ ERROR: Ansible not found!"
+    echo "Please install Ansible first or run the server setup script:"
+    echo "  $ANSIBLE_DIR/server-setup.sh $ENVIRONMENT"
+    exit 1
 fi
 
 # Install required Ansible collections
