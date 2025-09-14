@@ -1,0 +1,37 @@
+---
+# Most server setup is already done by cloud-init
+# Only need to verify and create application-specific directories
+
+- name: Verify Docker is running
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Verify required users are in docker group
+  user:
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  loop: "{{ docker_users }}"
+  # This is idempotent - won't change anything if already correct
+
+- name: Create base directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  loop:
+    - "{{ apps_dir }}"
+    - "{{ proxy_dir }}"
+    - "{{ backups_dir }}"
+
+- name: Create shared Docker network
+  docker_network:
+    name: "{{ shared_docker_network }}"
+    driver: bridge
+    ipam_config:
+      - subnet: "10.20.0.0/24"
+  become_user: "{{ ansible_user }}"

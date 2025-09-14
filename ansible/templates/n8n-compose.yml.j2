@@ -1,0 +1,307 @@
+volumes:
+  qdrant_storage:
+  valkey-data:
+  langfuse_postgres_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_minio_data:
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.25.0.0/24
+  {{ shared_docker_network }}:
+    external: true
+
+x-n8n: &service-n8n
+  image: n8nio/n8n:latest
+  environment: &service-n8n-env
+    DB_TYPE: postgresdb
+    DB_POSTGRESDB_HOST: postgres
+    DB_POSTGRESDB_USER: ${POSTGRES_USER}
+    DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+    N8N_DIAGNOSTICS_ENABLED: false
+    N8N_PERSONALIZATION_ENABLED: false
+    N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+    N8N_USER_MANAGEMENT_JWT_SECRET: ${N8N_USER_MANAGEMENT_JWT_SECRET}
+    WEBHOOK_URL: https://{{ n8n.hostname }}
+    NODE_ENV: production
+    EXECUTIONS_MODE: queue
+    N8N_RUNNERS_ENABLED: true
+    QUEUE_HEALTH_CHECK_ACTIVE: true
+    QUEUE_BULL_REDIS_HOST: redis
+    QUEUE_BULL_REDIS_PORT: 6379
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+    N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: true
+    NODE_FUNCTION_ALLOW_BUILTIN: "*"
+    NODE_FUNCTION_ALLOW_EXTERNAL: cheerio,axios,moment,lodash
+    N8N_COMMUNITY_PACKAGE_ENABLED: true
+  networks:
+    - default
+    - {{ shared_docker_network }}
+
+services:
+  n8n-import:
+    <<: *service-n8n
+    container_name: n8n-import
+    environment:
+      <<: *service-n8n-env
+      RUN_N8N_IMPORT: ${RUN_N8N_IMPORT:-false}
+    entrypoint: /bin/sh
+    command: /scripts/n8n_import_script.sh
+    volumes:
+      - ./n8n/backup:/backup
+      - ./n8n/n8n_import_script.sh:/scripts/n8n_import_script.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+
+  n8n:
+    <<: *service-n8n
+    container_name: n8n
+    restart: unless-stopped
+    volumes:
+      - ./n8n_storage:/home/node/.n8n
+      - ./n8n/backup:/backup
+      - ./shared:/data/shared
+    depends_on:
+      n8n-import:
+        condition: service_completed_successfully
+{% if resource_limits is defined %}
+    deploy:
+      resources:
+        limits:
+          memory: {{ resource_limits.n8n_memory | default('2g') }}
+{% endif %}
+
+  n8n-worker:
+    <<: *service-n8n
+    restart: unless-stopped
+    command: worker
+    volumes:
+      - ./n8n_storage:/home/node/.n8n
+      - ./shared:/data/shared
+    depends_on:
+      n8n:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    deploy:
+      replicas: {{ n8n.worker_count | default(1) }}
+{% if resource_limits is defined %}
+      resources:
+        limits:
+          memory: {{ resource_limits.n8n_memory | default('2g') }}
+{% endif %}
+    networks:
+      - default
+
+{% if n8n.enable_qdrant | default(false) %}
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
+    networks:
+      - default
+      - {{ shared_docker_network }}
+{% endif %}
+
+  postgres:
+    container_name: postgres
+    image: postgres:${POSTGRES_VERSION:-16}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+{% if resource_limits is defined %}
+    deploy:
+      resources:
+        limits:
+          memory: {{ resource_limits.postgres_memory | default('1g') }}
+{% endif %}
+    networks:
+      - default
+
+  redis:
+    container_name: redis
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - valkey-data:/data
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+{% if resource_limits is defined %}
+    deploy:
+      resources:
+        limits:
+          memory: {{ resource_limits.redis_memory | default('512m') }}
+{% endif %}
+    networks:
+      - default
+
+{% if n8n.enable_crawl4ai | default(false) %}
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    container_name: crawl4ai
+    restart: unless-stopped
+    shm_size: 1g
+    env_file:
+      - .env
+{% if resource_limits is defined %}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: {{ resource_limits.crawl4ai_memory | default('4g') }}
+{% endif %}
+    networks:
+      - default
+{% endif %}
+
+{% if n8n.enable_langfuse | default(false) %}
+  langfuse-worker:
+    profiles:
+      - langfuse
+    image: langfuse/langfuse-worker:3
+    restart: always
+    depends_on: &langfuse-depends-on
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment: &langfuse-worker-env
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
+      SALT: ${LANGFUSE_SALT}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: ${LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:-true}
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_CLUSTER_ENABLED: false
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_AUTH: LOCALONLYREDIS
+    networks:
+      - default
+
+  langfuse-web:
+    profiles:
+      - langfuse
+    image: langfuse/langfuse:3
+    restart: always
+    depends_on: *langfuse-depends-on
+    environment:
+      <<: *langfuse-worker-env
+      NEXTAUTH_URL: https://{{ langfuse.hostname }}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      LANGFUSE_INIT_ORG_ID: ${LANGFUSE_INIT_ORG_ID:-organization_id}
+      LANGFUSE_INIT_ORG_NAME: ${LANGFUSE_INIT_ORG_NAME:-Organization}
+      LANGFUSE_INIT_PROJECT_ID: ${LANGFUSE_INIT_PROJECT_ID:-project_id}
+      LANGFUSE_INIT_PROJECT_NAME: ${LANGFUSE_INIT_PROJECT_NAME:-Project}
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
+      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-}
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
+      AUTH_DISABLE_SIGNUP: true
+    networks:
+      - default
+      - {{ shared_docker_network }}
+
+  clickhouse:
+    profiles:
+      - langfuse
+    image: clickhouse/clickhouse-server
+    restart: always
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+    networks:
+      - default
+
+  minio:
+    profiles:
+      - langfuse
+    image: minio/minio
+    restart: always
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - langfuse_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+    networks:
+      - default
+{% endif %}

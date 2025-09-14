@@ -1,0 +1,40 @@
+---
+- name: Create backup directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  loop:
+    - "{{ backups_dir }}/n8n"
+    - "{{ backups_dir }}/postgres"
+    - "{{ backups_dir }}/scripts"
+
+- name: Template backup script
+  template:
+    src: ../templates/backup-script.sh.j2
+    dest: "{{ backups_dir }}/scripts/backup.sh"
+    mode: '0755'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Setup backup cron job
+  cron:
+    name: "N8N Automated Backup"
+    cron_file: n8n-backup
+    user: "{{ ansible_user }}"
+    job: "{{ backups_dir }}/scripts/backup.sh"
+    minute: "0"
+    hour: "2"
+    state: present
+
+- name: Setup backup cleanup cron job
+  cron:
+    name: "N8N Backup Cleanup"
+    cron_file: n8n-backup-cleanup
+    user: "{{ ansible_user }}"
+    job: "find {{ backups_dir }} -type f -mtime +{{ backup_retention_days }} -delete"
+    minute: "30"
+    hour: "2"
+    state: present

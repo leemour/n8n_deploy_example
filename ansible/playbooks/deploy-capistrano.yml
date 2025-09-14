@@ -1,0 +1,18 @@
+---
+- name: Deploy N8N (Capistrano Style)
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Include server setup tasks
+      include_tasks: ../tasks/server-setup.yml
+
+    - name: Include global proxy setup
+      include_tasks: ../tasks/proxy-setup.yml
+
+    - name: Include Capistrano-style N8N deployment
+      include_tasks: ../tasks/n8n-capistrano-deploy.yml
+
+    - name: Include backup setup
+      include_tasks: ../tasks/backup-setup.yml
+      when: enable_automated_backups | default(false)

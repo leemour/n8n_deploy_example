@@ -1,0 +1,28 @@
+# Production environment variables
+environment: production
+
+# N8N Configuration
+n8n:
+  hostname: "n8n.{{ server_domain }}"
+  worker_count: 2
+  enable_langfuse: true
+  enable_qdrant: true
+  enable_crawl4ai: true
+
+# Qdrant Configuration
+qdrant:
+  hostname: "qdrant.{{ server_domain }}"
+
+# Langfuse Configuration
+langfuse:
+  hostname: "langfuse.{{ server_domain }}"
+
+# Resource limits for production
+resource_limits:
+  n8n_memory: "2g"
+  postgres_memory: "1g"
+  redis_memory: "512m"
+  crawl4ai_memory: "4g"
+
+# Backup configuration
+enable_automated_backups: true

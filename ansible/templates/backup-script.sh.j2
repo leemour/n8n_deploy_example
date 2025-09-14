@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# N8N Backup Script
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="{{ backups_dir }}"
+APPS_DIR="{{ apps_dir }}"
+
+# Ensure backup directory exists on mounted volume
+mkdir -p "$BACKUP_DIR"
+
+echo "Starting backup at $(date)"
+
+# Create backup directories
+mkdir -p "$BACKUP_DIR/n8n/$BACKUP_DATE"
+mkdir -p "$BACKUP_DIR/postgres/$BACKUP_DATE"
+
+# Backup PostgreSQL database
+echo "Backing up PostgreSQL database..."
+cd "$APPS_DIR/n8n"
+docker-compose exec -T postgres pg_dump -U {{ postgres_user }} {{ postgres_db }} > "$BACKUP_DIR/postgres/$BACKUP_DATE/n8n_db.sql"
+
+if [ $? -eq 0 ]; then
+    echo "Database backup completed successfully"
+else
+    echo "Database backup failed!"
+    exit 1
+fi
+
+# Backup N8N storage
+echo "Backing up N8N storage..."
+tar -czf "$BACKUP_DIR/n8n/$BACKUP_DATE/n8n_storage.tar.gz" -C "$APPS_DIR/n8n" n8n_storage/
+
+if [ $? -eq 0 ]; then
+    echo "N8N storage backup completed successfully"
+else
+    echo "N8N storage backup failed!"
+    exit 1
+fi
+
+# Backup N8N configuration
+echo "Backing up N8N configuration..."
+cp "$APPS_DIR/n8n/docker-compose.yml" "$BACKUP_DIR/n8n/$BACKUP_DATE/"
+cp "$APPS_DIR/n8n/.env" "$BACKUP_DIR/n8n/$BACKUP_DATE/"
+
+# Create backup manifest
+echo "Creating backup manifest..."
+cat > "$BACKUP_DIR/n8n/$BACKUP_DATE/manifest.txt" << EOF
+Backup created: $(date)
+N8N Version: $(cd "$APPS_DIR/n8n" && docker-compose exec -T n8n n8n --version 2>/dev/null | head -1)
+Database backup: n8n_db.sql
+Storage backup: n8n_storage.tar.gz
+Configuration files: docker-compose.yml, .env
+EOF
+
+echo "Backup completed successfully at $(date)"
+echo "Backup location: $BACKUP_DIR/n8n/$BACKUP_DATE"
