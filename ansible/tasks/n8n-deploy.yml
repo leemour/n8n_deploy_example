@@ -1,0 +1,63 @@
+---
+- name: Create N8N application directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  loop:
+    - "{{ apps_dir }}/n8n"
+    - "{{ apps_dir }}/n8n/n8n_storage"
+    - "{{ apps_dir }}/n8n/n8n/backup"
+    - "{{ apps_dir }}/n8n/n8n/backup/credentials"
+    - "{{ apps_dir }}/n8n/n8n/backup/workflows"
+    - "{{ apps_dir }}/n8n/shared"
+
+- name: Set permissions on N8N storage
+  file:
+    path: "{{ apps_dir }}/n8n/n8n_storage"
+    mode: '0777'
+    recurse: yes
+
+- name: Template N8N docker-compose.yml
+  template:
+    src: ../templates/n8n-compose.yml.j2
+    dest: "{{ apps_dir }}/n8n/docker-compose.yml"
+    mode: '0644'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart n8n
+
+- name: Template N8N environment file
+  template:
+    src: ../templates/n8n.env.j2
+    dest: "{{ apps_dir }}/n8n/.env"
+    mode: '0600'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart n8n
+
+- name: Copy N8N import script
+  template:
+    src: ../templates/n8n_import_script.sh.j2
+    dest: "{{ apps_dir }}/n8n/n8n/n8n_import_script.sh"
+    mode: '0755'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+
+- name: Deploy N8N stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ apps_dir }}/n8n"
+    state: present
+    pull: always
+    profiles: "{{ ['langfuse'] if n8n.enable_langfuse | default(false) else [] }}"
+
+- name: Add N8N service configuration to global proxy
+  template:
+    src: ../templates/n8n-proxy.conf.j2
+    dest: "{{ proxy_dir }}/addons/n8n.conf"
+    mode: '0644'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart global proxy

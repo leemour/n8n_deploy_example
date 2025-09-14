@@ -1,0 +1,100 @@
+# Environment files - secrets and sensitive configuration
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Ansible sensitive files
+ansible/vars/secrets.yml
+ansible/group_vars/secrets.yml
+ansible/configs/*
+**/vault_pass.txt
+
+# n8n storage and runtime files
+n8n_storage/
+!n8n_storage/.gitkeep
+n8n/backup/credentials/
+n8n/backup/workflows/
+*.log
+*.journal
+
+# Docker files
+docker-compose.override.yml
+.dockerignore
+
+# SSH keys and certificates
+*.pem
+*.key
+*.crt
+*.p12
+ssh/
+.ssh/
+
+# Backup files
+*.backup
+*.bak
+backups/
+dumps/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Node.js (if any Node.js components are added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Python (if any Python scripts are added)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Local development overrides
+docker-compose.local.yml
+Caddyfile.local
+local_*

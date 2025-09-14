@@ -1,0 +1,41 @@
+{
+    # Global options
+    email {{ letsencrypt_email }}
+}
+
+# Production domains (openorbit.pro)
+{% if group_names[0] == 'production' %}
+n8n.openorbit.pro {
+    reverse_proxy {{ shared_docker_network }}_n8n_1:5678
+}
+
+qdrant.openorbit.pro {
+    reverse_proxy {{ shared_docker_network }}_qdrant_1:6333
+}
+
+{% if n8n.enable_langfuse | default(false) %}
+langfuse.openorbit.pro {
+    reverse_proxy {{ shared_docker_network }}_langfuse-web_1:3000
+}
+{% endif %}
+{% endif %}
+
+# Staging domains (staging.openorbit.pro)
+{% if group_names[0] == 'staging' %}
+n8n.staging.openorbit.pro {
+    reverse_proxy {{ shared_docker_network }}_n8n_1:5678
+}
+
+qdrant.staging.openorbit.pro {
+    reverse_proxy {{ shared_docker_network }}_qdrant_1:6333
+}
+
+{% if n8n.enable_langfuse | default(false) %}
+langfuse.staging.openorbit.pro {
+    reverse_proxy {{ shared_docker_network }}_langfuse-web_1:3000
+}
+{% endif %}
+{% endif %}
+
+# Import all application configurations from addons
+import /etc/caddy/addons/*.conf

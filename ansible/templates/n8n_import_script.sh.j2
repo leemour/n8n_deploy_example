@@ -1,0 +1,48 @@
+#!/bin/sh
+
+# Import script for N8N workflows and credentials
+echo "Starting N8N import process..."
+
+# Wait for database to be ready
+echo "Waiting for database connection..."
+until n8n user-management:list > /dev/null 2>&1; do
+  echo "Database not ready, waiting..."
+  sleep 5
+done
+
+# Check if import should run
+if [ "$RUN_N8N_IMPORT" = "true" ]; then
+    echo "Import enabled, starting import process..."
+
+    # Import credentials if they exist
+    if [ -d "/backup/credentials" ] && [ "$(ls -A /backup/credentials)" ]; then
+        echo "Importing credentials..."
+        for file in /backup/credentials/*.json; do
+            if [ -f "$file" ]; then
+                echo "Importing credential: $file"
+                n8n import:credentials --input="$file" || echo "Failed to import $file"
+            fi
+        done
+    else
+        echo "No credentials to import"
+    fi
+
+    # Import workflows if they exist
+    if [ -d "/backup/workflows" ] && [ "$(ls -A /backup/workflows)" ]; then
+        echo "Importing workflows..."
+        for file in /backup/workflows/*.json; do
+            if [ -f "$file" ]; then
+                echo "Importing workflow: $file"
+                n8n import:workflow --input="$file" || echo "Failed to import $file"
+            fi
+        done
+    else
+        echo "No workflows to import"
+    fi
+
+    echo "Import process completed"
+else
+    echo "Import disabled, skipping..."
+fi
+
+echo "N8N import container finished"

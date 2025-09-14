@@ -1,0 +1,35 @@
+# Global variables for all environments
+docker_compose_version: "2.21.0"
+timezone: "UTC"
+
+# Network configuration
+shared_docker_network: "n8n-network"
+
+# Common directories
+base_dir: "/srv/www"
+apps_dir: "{{ base_dir }}/n8n_{{ group_names[0] }}"
+proxy_dir: "{{ base_dir }}/proxy"
+backups_dir: "/mnt/data/backups/n8n_{{ group_names[0] }}"
+
+# Backup configuration
+backup_retention_days: 30
+backup_schedule: "0 2 * * *"  # Daily at 2 AM
+
+# Security
+firewall_allowed_ports:
+  - "25222"    # SSH
+  - "80"    # HTTP
+  - "443"   # HTTPS
+  - "19999" # Netdata
+
+# Docker configuration
+docker_users:
+  - "kulibin"
+  - "deploy"
+
+# Proxy configuration
+proxy_type: "caddy"  # Options: caddy, traefik, nginx
+
+# Repository configuration
+repo_url: "https://github.com/leemour/n8n_deploy_example"
+git_branch: "main"
