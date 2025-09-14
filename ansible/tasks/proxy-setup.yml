@@ -1,0 +1,45 @@
+---
+- name: Create proxy directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  loop:
+    - "{{ proxy_dir }}"
+    - "{{ proxy_dir }}/config"
+    - "{{ proxy_dir }}/addons"
+
+- name: Template global Caddyfile
+  template:
+    src: ../templates/global-Caddyfile.j2
+    dest: "{{ proxy_dir }}/Caddyfile"
+    mode: '0644'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart global proxy
+
+- name: Template global proxy docker-compose.yml
+  template:
+    src: ../templates/global-proxy-compose.yml.j2
+    dest: "{{ proxy_dir }}/docker-compose.yml"
+    mode: '0644'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart global proxy
+
+- name: Template global proxy environment file
+  template:
+    src: ../templates/global-proxy.env.j2
+    dest: "{{ proxy_dir }}/.env"
+    mode: '0600'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart global proxy
+
+- name: Start global proxy
+  community.docker.docker_compose_v2:
+    project_src: "{{ proxy_dir }}"
+    state: present
+    pull: always

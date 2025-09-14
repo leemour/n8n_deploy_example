@@ -12,6 +12,8 @@ networks:
     ipam:
       config:
         - subnet: 10.25.0.0/24
+  {{ shared_docker_network }}:
+    external: true
 
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
@@ -25,18 +27,21 @@ x-n8n: &service-n8n
     N8N_PERSONALIZATION_ENABLED: false
     N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
     N8N_USER_MANAGEMENT_JWT_SECRET: ${N8N_USER_MANAGEMENT_JWT_SECRET}
-    WEBHOOK_URL: ${WEBHOOK_URL:-${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}}
+    WEBHOOK_URL: https://{{ n8n.hostname }}
     NODE_ENV: production
     EXECUTIONS_MODE: queue
     N8N_RUNNERS_ENABLED: true
     QUEUE_HEALTH_CHECK_ACTIVE: true
-    QUEUE_BULL_REDIS_HOST: ${REDIS_HOST:-redis}
-    QUEUE_BULL_REDIS_PORT: ${REDIS_PORT:-6379}
+    QUEUE_BULL_REDIS_HOST: redis
+    QUEUE_BULL_REDIS_PORT: 6379
     N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
     N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: true
     NODE_FUNCTION_ALLOW_BUILTIN: "*"
     NODE_FUNCTION_ALLOW_EXTERNAL: cheerio,axios,moment,lodash
     N8N_COMMUNITY_PACKAGE_ENABLED: true
+  networks:
+    - default
+    - {{ shared_docker_network }}
 
 services:
   n8n-import:
@@ -53,6 +58,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - default
 
   n8n:
     <<: *service-n8n
@@ -65,6 +72,12 @@ services:
     depends_on:
       n8n-import:
         condition: service_completed_successfully
+{% if resource_limits is defined %}
+    deploy:
+      resources:
+        limits:
+          memory: {{ resource_limits.n8n_memory | default('2g') }}
+{% endif %}
 
   n8n-worker:
     <<: *service-n8n
@@ -81,8 +94,16 @@ services:
       postgres:
         condition: service_healthy
     deploy:
-      replicas: ${N8N_WORKER_COUNT:-1}
+      replicas: {{ n8n.worker_count | default(1) }}
+{% if resource_limits is defined %}
+      resources:
+        limits:
+          memory: {{ resource_limits.n8n_memory | default('2g') }}
+{% endif %}
+    networks:
+      - default
 
+{% if n8n.enable_qdrant | default(false) %}
   qdrant:
     image: qdrant/qdrant
     container_name: qdrant
@@ -91,12 +112,14 @@ services:
       - qdrant_storage:/qdrant/storage
     environment:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
-    expose:
-      - "6333"
+    networks:
+      - default
+      - {{ shared_docker_network }}
+{% endif %}
 
   postgres:
     container_name: postgres
-    image: postgres:${POSTGRES_VERSION:-latest}
+    image: postgres:${POSTGRES_VERSION:-16}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -109,6 +132,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
+{% if resource_limits is defined %}
+    deploy:
+      resources:
+        limits:
+          memory: {{ resource_limits.postgres_memory | default('1g') }}
+{% endif %}
+    networks:
+      - default
 
   redis:
     container_name: redis
@@ -133,21 +164,35 @@ services:
       interval: 3s
       timeout: 10s
       retries: 10
+{% if resource_limits is defined %}
+    deploy:
+      resources:
+        limits:
+          memory: {{ resource_limits.redis_memory | default('512m') }}
+{% endif %}
+    networks:
+      - default
 
+{% if n8n.enable_crawl4ai | default(false) %}
   crawl4ai:
-    image: unclecode/crawl4ai:latest # Use official image
+    image: unclecode/crawl4ai:latest
     container_name: crawl4ai
     restart: unless-stopped
-    shm_size: 1g # Recommended for browser operations
+    shm_size: 1g
     env_file:
       - .env
+{% if resource_limits is defined %}
     deploy:
       resources:
         limits:
           cpus: "1.0"
-          memory: 4G # Increased based on documentation recommendation
+          memory: {{ resource_limits.crawl4ai_memory | default('4g') }}
+{% endif %}
+    networks:
+      - default
+{% endif %}
 
-# ADD langfuse
+{% if n8n.enable_langfuse | default(false) %}
   langfuse-worker:
     profiles:
       - langfuse
@@ -163,48 +208,35 @@ services:
       clickhouse:
         condition: service_healthy
     environment: &langfuse-worker-env
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/langfuse
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
       SALT: ${LANGFUSE_SALT}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: ${LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:-true}
-      CLICKHOUSE_MIGRATION_URL: ${CLICKHOUSE_MIGRATION_URL:-clickhouse://clickhouse:9000}
-      CLICKHOUSE_URL: ${CLICKHOUSE_URL:-http://clickhouse:8123}
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
-      CLICKHOUSE_CLUSTER_ENABLED: ${CLICKHOUSE_CLUSTER_ENABLED:-false}
-      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${LANGFUSE_S3_EVENT_UPLOAD_BUCKET:-langfuse}
-      LANGFUSE_S3_EVENT_UPLOAD_REGION: ${LANGFUSE_S3_EVENT_UPLOAD_REGION:-auto}
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID:-minio}
+      CLICKHOUSE_CLUSTER_ENABLED: false
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
       LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: ${LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT:-http://minio:9000}
-      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: ${LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE:-true}
-      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: ${LANGFUSE_S3_EVENT_UPLOAD_PREFIX:-events/}
-      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: ${LANGFUSE_S3_MEDIA_UPLOAD_BUCKET:-langfuse}
-      LANGFUSE_S3_MEDIA_UPLOAD_REGION: ${LANGFUSE_S3_MEDIA_UPLOAD_REGION:-auto}
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID:-minio}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
       LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT:-http://localhost:9090}
-      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: ${LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE:-true}
-      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: ${LANGFUSE_S3_MEDIA_UPLOAD_PREFIX:-media/}
-      LANGFUSE_S3_BATCH_EXPORT_ENABLED: ${LANGFUSE_S3_BATCH_EXPORT_ENABLED:-false}
-      LANGFUSE_S3_BATCH_EXPORT_BUCKET: ${LANGFUSE_S3_BATCH_EXPORT_BUCKET:-langfuse}
-      LANGFUSE_S3_BATCH_EXPORT_PREFIX: ${LANGFUSE_S3_BATCH_EXPORT_PREFIX:-exports/}
-      LANGFUSE_S3_BATCH_EXPORT_REGION: ${LANGFUSE_S3_BATCH_EXPORT_REGION:-auto}
-      LANGFUSE_S3_BATCH_EXPORT_ENDPOINT: ${LANGFUSE_S3_BATCH_EXPORT_ENDPOINT:-http://minio:9000}
-      LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT: ${LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT:-http://localhost:9090}
-      LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID: ${LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID:-minio}
-      LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE: ${LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE:-true}
-      LANGFUSE_INGESTION_QUEUE_DELAY_MS: ${LANGFUSE_INGESTION_QUEUE_DELAY_MS:-}
-      LANGFUSE_INGESTION_CLICKHOUSE_WRITE_INTERVAL_MS: ${LANGFUSE_INGESTION_CLICKHOUSE_WRITE_INTERVAL_MS:-}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_AUTH: ${REDIS_AUTH:-LOCALONLYREDIS}
-      REDIS_TLS_ENABLED: ${REDIS_TLS_ENABLED:-false}
-      REDIS_TLS_CA: ${REDIS_TLS_CA:-/certs/ca.crt}
-      REDIS_TLS_CERT: ${REDIS_TLS_CERT:-/certs/redis.crt}
-      REDIS_TLS_KEY: ${REDIS_TLS_KEY:-/certs/redis.key}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_AUTH: LOCALONLYREDIS
+    networks:
+      - default
 
   langfuse-web:
     profiles:
@@ -214,7 +246,7 @@ services:
     depends_on: *langfuse-depends-on
     environment:
       <<: *langfuse-worker-env
-      NEXTAUTH_URL: https://${LANGFUSE_HOSTNAME}
+      NEXTAUTH_URL: https://{{ langfuse.hostname }}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       LANGFUSE_INIT_ORG_ID: ${LANGFUSE_INIT_ORG_ID:-organization_id}
       LANGFUSE_INIT_ORG_NAME: ${LANGFUSE_INIT_ORG_NAME:-Organization}
@@ -225,7 +257,10 @@ services:
       LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
       LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-}
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
-      AUTH_DISABLE_SIGNUP: ${AUTH_DISABLE_SIGNUP:-true}
+      AUTH_DISABLE_SIGNUP: true
+    networks:
+      - default
+      - {{ shared_docker_network }}
 
   clickhouse:
     profiles:
@@ -246,6 +281,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 1s
+    networks:
+      - default
 
   minio:
     profiles:
@@ -253,7 +290,6 @@ services:
     image: minio/minio
     restart: always
     entrypoint: sh
-    # create the 'langfuse' bucket before starting the service
     command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
     environment:
       MINIO_ROOT_USER: minio
@@ -266,3 +302,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 1s
+    networks:
+      - default
+{% endif %}

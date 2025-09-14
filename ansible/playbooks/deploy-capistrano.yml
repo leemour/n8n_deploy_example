@@ -1,0 +1,15 @@
+---
+- name: Deploy N8N (Capistrano Style) - No Sudo Required
+  hosts: all
+  vars_files:
+    - ../group_vars/all.yml
+    - "../group_vars/{{ ansible_limit }}.yml"
+  handlers:
+    - import_tasks: ../handlers/main.yml
+
+  tasks:
+    - name: Include Capistrano-style N8N deployment
+      include_tasks: ../tasks/n8n-capistrano-deploy.yml
+
+    - name: Include global proxy setup
+      include_tasks: ../tasks/proxy-setup.yml

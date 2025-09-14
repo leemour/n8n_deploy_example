@@ -1,0 +1,54 @@
+---
+# Alternative: Git-based deployment with Ansible automation
+# This approach clones your repository and uses Ansible for configuration management
+
+- name: Clone or update N8N repository
+  git:
+    repo: "{{ repo_url }}.git"
+    dest: "{{ apps_dir }}"
+    version: "{{ git_branch | default('main') }}"
+    force: yes
+
+- name: Create additional directories not in git
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  loop:
+    - "{{ apps_dir }}/n8n_storage"
+    - "{{ apps_dir }}/n8n/backup/credentials"
+    - "{{ apps_dir }}/n8n/backup/workflows"
+    - "{{ apps_dir }}/shared"
+
+- name: Set permissions on N8N storage
+  file:
+    path: "{{ apps_dir }}/n8n_storage"
+    mode: '0777'
+    recurse: yes
+
+- name: Template environment file (secrets not in git)
+  template:
+    src: ../templates/n8n.env.j2
+    dest: "{{ apps_dir }}/.env"
+    mode: '0600'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart n8n
+
+- name: Deploy N8N stack from git repository
+  community.docker.docker_compose_v2:
+    project_src: "{{ apps_dir }}"
+    state: present
+    pull: always
+    profiles: "{{ ['langfuse'] if n8n.enable_langfuse | default(false) else [] }}"
+
+- name: Add N8N service configuration to global proxy
+  template:
+    src: ../templates/n8n-proxy.conf.j2
+    dest: "{{ proxy_dir }}/addons/n8n.conf"
+    mode: '0644'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: restart global proxy

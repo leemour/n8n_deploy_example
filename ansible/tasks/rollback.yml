@@ -1,0 +1,33 @@
+---
+# Rollback to previous release
+- name: Get current release
+  stat:
+    path: "{{ apps_dir }}/current"
+  register: current_release
+
+- name: Get previous release
+  shell: |
+    cd {{ apps_dir }}/releases
+    ls -t | head -n 2 | tail -n 1
+  register: previous_release
+
+- name: Stop current services
+  community.docker.docker_compose_v2:
+    project_src: "{{ apps_dir }}/current"
+    state: absent
+  ignore_errors: yes
+
+- name: Switch to previous release
+  file:
+    src: "{{ apps_dir }}/releases/{{ previous_release.stdout }}"
+    dest: "{{ apps_dir }}/current"
+    state: link
+
+- name: Start previous release
+  community.docker.docker_compose_v2:
+    project_src: "{{ apps_dir }}/current"
+    state: present
+
+- name: Show rollback info
+  debug:
+    msg: "Rolled back to release: {{ previous_release.stdout }}"

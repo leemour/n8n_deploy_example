@@ -1,0 +1,11 @@
+---
+- name: restart global proxy
+  community.docker.docker_compose_v2:
+    project_src: "{{ proxy_dir }}"
+    restarted: yes
+
+- name: restart n8n
+  community.docker.docker_compose_v2:
+    project_src: "{{ apps_dir }}/n8n"
+    restarted: yes
+    profiles: "{{ ['langfuse'] if n8n.enable_langfuse | default(false) else [] }}"

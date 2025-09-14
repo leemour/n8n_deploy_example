@@ -1,0 +1,20 @@
+# Staging environment variables
+env_name: staging
+
+# N8N Configuration
+n8n:
+  hostname: "n8n.{{ server_domain }}"
+  worker_count: 1
+  enable_langfuse: false
+  enable_qdrant: false
+  enable_crawl4ai: false
+
+# Resource limits for staging (lighter)
+resource_limits:
+  n8n_memory: "1g"
+  postgres_memory: "512m"
+  redis_memory: "256m"
+  crawl4ai_memory: "2g"
+
+# Backup configuration
+enable_automated_backups: false
