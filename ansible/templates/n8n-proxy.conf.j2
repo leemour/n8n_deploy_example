@@ -1,18 +1,18 @@
 # N8N Service Configuration
 {{ n8n.hostname }} {
-    reverse_proxy n8n-app_n8n_1:5678
+    reverse_proxy n8n:5678
 }
 
 {% if n8n.enable_qdrant | default(false) %}
 # Qdrant Service Configuration
 {{ qdrant.hostname }} {
-    reverse_proxy n8n-app_qdrant_1:6333
+    reverse_proxy qdrant:6333
 }
 {% endif %}
 
 {% if n8n.enable_langfuse | default(false) %}
 # Langfuse Service Configuration
 {{ langfuse.hostname }} {
-    reverse_proxy n8n-app_langfuse-web_1:3000
+    reverse_proxy langfuse-web:3000
 }
 {% endif %}

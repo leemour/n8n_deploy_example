@@ -5,28 +5,28 @@
 
 # Production domains (openorbit.pro)
 n8n.openorbit.pro {
-    reverse_proxy {{ shared_docker_network }}_n8n_1:5678
+    reverse_proxy n8n:5678
 }
 
 qdrant.openorbit.pro {
-    reverse_proxy {{ shared_docker_network }}_qdrant_1:6333
+    reverse_proxy qdrant:6333
 }
 
 langfuse.openorbit.pro {
-    reverse_proxy {{ shared_docker_network }}_langfuse-web_1:3000
+    reverse_proxy langfuse-web:3000
 }
 
 # Staging domains (staging.openorbit.pro)
 n8n.staging.openorbit.pro {
-    reverse_proxy {{ shared_docker_network }}_n8n_1:5678
+    reverse_proxy n8n:5678
 }
 
 qdrant.staging.openorbit.pro {
-    reverse_proxy {{ shared_docker_network }}_qdrant_1:6333
+    reverse_proxy qdrant:6333
 }
 
 langfuse.staging.openorbit.pro {
-    reverse_proxy {{ shared_docker_network }}_langfuse-web_1:3000
+    reverse_proxy langfuse-web:3000
 }
 
 # Import all application configurations from addons
