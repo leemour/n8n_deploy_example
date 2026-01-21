@@ -99,7 +99,7 @@
   community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
     state: present
-    pull: always
+    pull: missing
 
 - name: Keep only last 5 releases
   shell: |
