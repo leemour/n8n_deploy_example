@@ -42,6 +42,7 @@ ansible-playbook \
     -i "$ANSIBLE_DIR/inventory/hosts.yml" \
     --limit "$ENVIRONMENT" \
     --ask-vault-pass \
+    --ask-become-pass \
     "$ANSIBLE_DIR/playbooks/deploy.yml"
 
 echo "Deployment completed!"

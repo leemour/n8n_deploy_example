@@ -19,6 +19,11 @@ http://:7687 {
     reverse_proxy qdrant:6333
 }
 
+# pgAdmin
+{$PGADMIN_HOSTNAME} {
+    reverse_proxy pgadmin:80
+}
+
 # Langfuse
 {$LANGFUSE_HOSTNAME} {
     reverse_proxy langfuse-web:3000
