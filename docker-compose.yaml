@@ -108,7 +108,7 @@ services:
     image: postgres:${POSTGRES_VERSION:-latest}
     restart: unless-stopped
     ports:
-      - "5432:5432"  # Expose PostgreSQL port for external connections
+      - "5433:5432"  # Map to port 5433 to avoid conflict with system PostgreSQL
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s
