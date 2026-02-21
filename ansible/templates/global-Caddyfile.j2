@@ -16,6 +16,22 @@ langfuse.openorbit.pro {
     reverse_proxy langfuse-web:3000
 }
 
+pgadmin.openorbit.pro {
+    reverse_proxy pgadmin:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+        header_up X-Script-Name ""
+    }
+}
+
+# pgWeb (host systemd service)
+pgweb.openorbit.pro {
+    reverse_proxy host.docker.internal:8081
+}
+
 # Staging domains (staging.openorbit.pro)
 n8n.staging.openorbit.pro {
     reverse_proxy n8n:5678
@@ -27,6 +43,21 @@ qdrant.staging.openorbit.pro {
 
 langfuse.staging.openorbit.pro {
     reverse_proxy langfuse-web:3000
+}
+
+pgadmin.staging.openorbit.pro {
+    reverse_proxy pgadmin:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+        header_up X-Script-Name ""
+    }
+}
+
+pgweb.staging.openorbit.pro {
+    reverse_proxy host.docker.internal:8081
 }
 
 # Import all application configurations from addons

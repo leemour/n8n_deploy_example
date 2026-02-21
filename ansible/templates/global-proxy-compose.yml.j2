@@ -23,6 +23,8 @@ services:
       - caddy-config:/config:rw
     environment:
       - LETSENCRYPT_EMAIL={{ letsencrypt_email }}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - {{ shared_docker_network }}
     cap_drop:

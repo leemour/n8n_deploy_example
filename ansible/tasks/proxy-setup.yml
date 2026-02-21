@@ -38,8 +38,20 @@
     group: "{{ deploy_user }}"
   notify: restart global proxy
 
+- name: Check if global-caddy container exists
+  shell: docker ps -a --filter "name=global-caddy" --format "{{ '{{.Names}}' }}"
+  register: existing_container
+  changed_when: false
+  failed_when: false
+
+- name: Remove existing global-caddy container if present
+  shell: docker rm -f global-caddy
+  when: existing_container.stdout == "global-caddy"
+  ignore_errors: yes
+
 - name: Start global proxy
   community.docker.docker_compose_v2:
     project_src: "{{ proxy_dir }}"
     state: present
     pull: always
+    recreate: always

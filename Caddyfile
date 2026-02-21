@@ -24,6 +24,11 @@ http://:7687 {
     reverse_proxy pgadmin:80
 }
 
+# pgWeb (host systemd service on port 8081; Caddy needs extra_hosts: host.docker.internal for Linux)
+{$PGWEB_HOSTNAME} {
+    reverse_proxy host.docker.internal:8081
+}
+
 # Langfuse
 {$LANGFUSE_HOSTNAME} {
     reverse_proxy langfuse-web:3000

@@ -104,6 +104,8 @@ services:
       - "443:443"
       - "7687:7687"
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy-addon:/etc/caddy/addons:ro
@@ -113,6 +115,7 @@ services:
       - N8N_HOSTNAME=${N8N_HOSTNAME}
       - QDRANT_HOSTNAME=${QDRANT_HOSTNAME}
       - PGADMIN_HOSTNAME=${PGADMIN_HOSTNAME}
+      - PGWEB_HOSTNAME=${PGWEB_HOSTNAME}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-internal}
       - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME}
     cap_drop:
