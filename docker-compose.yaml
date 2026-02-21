@@ -107,6 +107,8 @@ services:
     container_name: postgres
     image: postgres:${POSTGRES_VERSION:-latest}
     restart: unless-stopped
+    ports:
+      - "5432:5432"  # Expose PostgreSQL port for external connections
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s
@@ -160,14 +162,23 @@ services:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
     restart: unless-stopped
+    user: "5050:5050"
+    # Volume must be writable by uid 5050. If you get "Permission denied: /var/lib/pgadmin/sessions",
+    # run: docker run --rm -v current_pgadmin_data:/var/lib/pgadmin busybox chown -R 5050:5050 /var/lib/pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@openorbit.pro}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: 'True'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
       PGADMIN_DISABLE_POSTFIX: 'True'
+      PGADMIN_CONFIG_PROXY_X_FOR_COUNT: '1'
+      PGADMIN_CONFIG_PROXY_X_PROTO_COUNT: '1'
+      PGADMIN_CONFIG_PROXY_X_HOST_COUNT: '1'
+      PGADMIN_CONFIG_PROXY_X_PORT_COUNT: '1'
+      PGADMIN_CONFIG_PROXY_X_PREFIX_COUNT: '1'
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
     volumes:
-      - ./pgadmin_data:/var/lib/pgadmin
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
       postgres:
         condition: service_healthy
