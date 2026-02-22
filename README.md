@@ -24,7 +24,8 @@ Your n8n will be available at `https://n8n.yourdomain.com` 🎉
 
 ## 📋 Features
 
-- **Microservices Architecture** - n8n, PostgreSQL, Redis, Qdrant, Crawl4AI, Langfuse
+- **Microservices Architecture** - n8n, PostgreSQL, Redis, Qdrant, Crawl4AI, Langfuse, pgAdmin, pgWeb
+- **Database Management** - pgAdmin for PostgreSQL administration, pgWeb for quick database access
 - **Automated Deployment** - Capistrano-style with Ansible (no vault passwords needed)
 - **SSL Certificates** - Automatic Let's Encrypt via Caddy
 - **Worker Queue System** - Scalable background job processing
@@ -39,16 +40,19 @@ Internet
 Global Caddy (Reverse Proxy)
   ├─→ n8n.yourdomain.com → n8n:5678
   ├─→ qdrant.yourdomain.com → qdrant:6333
-  └─→ langfuse.yourdomain.com → langfuse-web:3000
+  ├─→ langfuse.yourdomain.com → langfuse-web:3000
+  ├─→ pgadmin.yourdomain.com → pgadmin:80
+  └─→ pgweb.yourdomain.com → host:8081
 
 Docker Network: n8n-network (shared)
   ├─ n8n (main application)
   ├─ n8n-worker (background jobs)
-  ├─ postgres (database)
+  ├─ postgres (database - exposed on 5433)
   ├─ redis (queue)
   ├─ qdrant (vector DB)
   ├─ crawl4ai (web scraping)
-  └─ langfuse (LLM monitoring)
+  ├─ langfuse (LLM monitoring)
+  └─ pgadmin (database admin)
 ```
 
 ## 📚 Documentation
@@ -59,10 +63,11 @@ Docker Network: n8n-network (shared)
 
 ### Configuration
 - **[Caddy Setup](docs/CADDY_SETUP.md)** - Reverse proxy and SSL configuration
+- **[Service Connections](docs/SERVICE_CONNECTIONS.md)** - How to connect to all services (PostgreSQL, pgAdmin, Qdrant, etc.)
+- **[Caddy Multiple Networks](docs/CADDY_MULTIPLE_NETWORKS.md)** - Configuring Caddy for multiple Docker networks
 - **[N8N Microservices Guide](docs/N8N_MICROSERVICES_GUIDE.md)** - Detailed service configuration (Russian)
 
 ### Troubleshooting
-- **[Understanding the Issue](docs/UNDERSTANDING_THE_ISSUE.md)** - What happened when your n8n went down
 - **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
 ## 🎯 Key Concepts
@@ -146,6 +151,8 @@ N8N_USER_MANAGEMENT_JWT_SECRET=your-jwt-secret
 
 # Database
 POSTGRES_PASSWORD=your-postgres-password
+PGADMIN_DEFAULT_EMAIL=admin@yourdomain.com
+PGADMIN_DEFAULT_PASSWORD=your-pgadmin-password
 
 # Optional Services
 QDRANT_API_KEY=your-qdrant-key
