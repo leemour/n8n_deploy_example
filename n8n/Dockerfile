@@ -2,43 +2,38 @@ FROM n8nio/n8n:latest
 
 USER root
 
-# 1. Обновляем систему и ставим зависимости для Puppeteer и Sharp
-RUN apt-get update && \
-    apt-get install -y \
+# 1. Restore apk package manager in hardened Alpine image and install dependencies
+RUN set -ex && \
+    # Download and install apk-tools
+    cd /tmp && \
+    wget https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/apk-tools-2.14.9-r3.apk && \
+    tar -xzf apk-tools-2.14.9-r3.apk && \
+    mv sbin/apk /sbin/ && \
+    chmod +x /sbin/apk && \
+    rm -rf /tmp/* && \
+    # Now install packages
+    apk add --no-cache \
     chromium \
-    chromium-driver \
-    fonts-liberation \
-    libappindicator3-1 \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    xdg-utils \
+    chromium-chromedriver \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
     python3 \
     make \
-    g++ \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    g++
 
-# 2. Install Community nodes
-RUN cd /usr/local/lib/node_modules/n8n && \
-    npm install --save \
+# 2. Install Community nodes in the correct location
+RUN mkdir -p /home/node/.n8n/nodes && \
+    cd /home/node/.n8n/nodes && \
+    npm init -y && \
+    npm install --legacy-peer-deps \
     n8n-nodes-evolution-api \
-    n8n-nodes-evolution-whatsapp-api \
     @mendable/n8n-nodes-firecrawl \
     n8n-nodes-globals \
     n8n-nodes-text-manipulation \
-    n8n-nodes-opensearch \
     n8n-nodes-apify \
     n8n-nodes-puppeteer \
     @brave/n8n-nodes-brave-search \
@@ -50,7 +45,9 @@ RUN cd /usr/local/lib/node_modules/n8n && \
     n8n-nodes-scrapingbee \
     n8n-nodes-pdfco \
     @cloudconvert/n8n-nodes-cloudconvert \
-    @blotato/n8n-nodes-blotato
+    @blotato/n8n-nodes-blotato \
+    @tavily/n8n-nodes-tavily && \
+    chown -R node:node /home/node/.n8n
 
 # 3. Install NPM packages for use inside Code node
 RUN npm install -g \

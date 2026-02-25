@@ -47,13 +47,14 @@ echo -e "${GREEN}📄 2. Копирование .env файла...${NC}"
 cp .env "$BACKUP_DIR/.env"
 echo -e "${GREEN}   ✅ .env файл сохранен${NC}"
 
-# 3. Бэкап n8n_storage (если симлинк — архивируется содержимое)
+# 3. Бэкап n8n_storage (если симлинк — архивируется содержимое, не ссылка)
 echo -e "${GREEN}📂 3. Архивирование n8n_storage...${NC}"
 if [ -e "n8n_storage" ]; then
-    tar -czf "$BACKUP_DIR/n8n_storage.tar.gz" \
+    tar -czhf "$BACKUP_DIR/n8n_storage.tar.gz" \
         --exclude='n8n_storage/.cache' \
         --exclude='n8n_storage/n8nEventLog.log' \
-        n8n_storage/
+        -C "$(dirname "n8n_storage")" \
+        "$(basename "n8n_storage")"
     echo -e "${GREEN}   ✅ n8n_storage заархивирован${NC}"
 else
     echo -e "${YELLOW}   ⏭️  n8n_storage не найден, пропускаем${NC}"

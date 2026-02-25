@@ -313,7 +313,7 @@ services:
       start_period: 1s
 
   evolution-api:
-    image: evolutionapi/evolution-api:latest # Use official image
+    image: atendai/evolution-api:latest # Use official image
     container_name: evolution_api
     restart: unless-stopped
     ports:

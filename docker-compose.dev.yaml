@@ -65,6 +65,8 @@ services:
     <<: *service-n8n
     container_name: n8n
     restart: unless-stopped
+    ports:
+      - "5678:5678"
     volumes:
       - ./n8n_storage:/home/node/.n8n
       - ./n8n/backup:/backup
@@ -142,6 +144,8 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
+    ports:
+      - "5434:5432"  # Map to port 5434 to avoid conflict with other PostgreSQL containers
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -314,7 +318,7 @@ services:
       start_period: 1s
 
   evolution-api:
-    image: evolutionapi/evolution-api:latest # Use official image
+    image: atendai/evolution-api:latest # Use official image
     container_name: evolution_api
     restart: unless-stopped
     ports:
