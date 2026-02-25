@@ -101,8 +101,14 @@
     state: present
     pull: missing
 
+# Old releases can contain Docker-created dirs (e.g. pgadmin_data from bind mounts)
+# owned by root or container UIDs; use become so we can remove them.
 - name: Keep only last 5 releases
   shell: |
     cd {{ apps_dir }}/releases
-    ls -t | tail -n +6 | xargs rm -rf
+    releases_to_remove=$(ls -t | tail -n +6)
+    if [ -n "$releases_to_remove" ]; then
+      echo "$releases_to_remove" | xargs rm -rf
+    fi
+  become: yes
   ignore_errors: yes

@@ -33,7 +33,8 @@ ssh/
 # Backup files
 *.backup
 *.bak
-backups/
+backups/*
+!/backups/.gitkeep
 dumps/
 
 # Temporary files

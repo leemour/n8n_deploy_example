@@ -6,6 +6,8 @@ volumes:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
   pgadmin_data:
+  evolution_instances:
+  evolution_store:
 
 networks:
   default:
@@ -17,6 +19,9 @@ networks:
     external: true
 
 x-n8n: &service-n8n
+  build:
+    context: ./n8n
+    dockerfile: Dockerfile
   image: n8nio/n8n:latest
   environment: &service-n8n-env
     DB_TYPE: postgresdb
@@ -108,7 +113,7 @@ services:
     image: postgres:${POSTGRES_VERSION:-latest}
     restart: unless-stopped
     ports:
-      - "5433:5432"  # Map to port 5433 to avoid conflict with system PostgreSQL
+      - "5434:5432"  # Map to port 5434 to avoid conflict with other PostgreSQL containers
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s
@@ -120,6 +125,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
+      - ./init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
 
   redis:
     container_name: redis
@@ -305,3 +311,33 @@ services:
       timeout: 5s
       retries: 5
       start_period: 1s
+
+  evolution-api:
+    image: evolutionapi/evolution-api:latest # Use official image
+    container_name: evolution_api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_URL=http://localhost:8080 # Replace with your domain in production
+      - SERVER_TYPE=http
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=MySuperSecretEvolutionKey123! # PASSWORD FOR N8N NODE
+
+      # Connection to DB and Cache (use internal container names)
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evo_user:evo_pass@postgres:5432/evolution?schema=public
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/6
+
+      # WhatsApp settings
+      - WA_BUSINESS_TOKEN_KEEP_ALIVE=true
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
