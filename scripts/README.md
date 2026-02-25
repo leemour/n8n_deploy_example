@@ -60,7 +60,16 @@ Generates secure random values for all required environment variables.
 
 ## Database Scripts
 
-Located in `scripts/db/` - contains database backup and restore utilities.
+Located in `scripts/db/` – PostgreSQL backup and restore for n8n.
+
+| Script | Purpose |
+|--------|---------|
+| `backup-n8n.sh` | Full backup (DB, .env, n8n_storage, compose) |
+| `simple-backup.sh` | Lightweight backup (DB + encryption key only) |
+| `restore-n8n.sh` | Restore from full backup archive |
+| `simple-restore.sh` | Restore from simple backup folder |
+
+**Run from project root** (where `docker-compose` and `.env` live). See **[scripts/db/BACKUP_RESTORE.md](db/BACKUP_RESTORE.md)** for full instructions (Ubuntu first, Windows transfer, and storing N8N_ENCRYPTION_KEY in password storage).
 
 ## Deployment Scripts
 

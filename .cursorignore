@@ -4,3 +4,6 @@
 
 production.env
 staging.env
+
+/backups/*
+!/backups/.gitkeep

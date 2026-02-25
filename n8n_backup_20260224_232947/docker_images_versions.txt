@@ -1,0 +1,10 @@
+CONTAINER              REPOSITORY           TAG                 IMAGE ID            SIZE
+crawl4ai               unclecode/crawl4ai   latest              477d748c74a5        3.8GB
+current-n8n-worker-1   n8nio/n8n            latest              f5b36596919f        961MB
+current-n8n-worker-2   n8nio/n8n            latest              f5b36596919f        961MB
+n8n                    n8nio/n8n            latest              f5b36596919f        961MB
+n8n-import             n8nio/n8n            latest              f5b36596919f        961MB
+pgadmin                dpage/pgadmin4       latest              916774211e8d        563MB
+postgres               postgres             17                  1268669160cb        453MB
+qdrant                 qdrant/qdrant        latest              d2ea76deb232        189MB
+redis                  valkey/valkey        8-alpine            c5486cdc5b3e        42MB
