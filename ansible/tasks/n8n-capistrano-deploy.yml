@@ -15,14 +15,10 @@
     - "{{ apps_dir }}/shared"
     - "{{ apps_dir }}/shared/backups"
 
-- name: Create shared n8n_storage directory with correct ownership
+- name: Create shared n8n_storage directory
   file:
     path: "{{ apps_dir }}/shared/n8n_storage"
     state: directory
-    mode: '0755'
-    owner: "1000"  # Docker container UID (node user in n8n image)
-    group: "1000"
-  become: yes
 
 - name: Get current timestamp for release
   set_fact:
@@ -80,53 +76,6 @@
     - { name: ".env", owner: "{{ deploy_user }}", group: "{{ deploy_user }}" }
     - { name: "n8n_storage", owner: "1000", group: "1000" }
 
-- name: Ensure Hetzner volume data directories exist
-  file:
-    path: "{{ n8n_data_path }}/{{ item }}"
-    state: directory
-    mode: "0755"
-  loop:
-    - postgres
-    - redis
-    - qdrant
-    - pgadmin
-    - evolution_instances
-    - evolution_store
-    - clickhouse
-    - clickhouse-logs
-    - minio
-  become: yes
-
-- name: Set postgres data dir ownership for container (postgres UID 999)
-  file:
-    path: "{{ n8n_data_path }}/postgres"
-    state: directory
-    owner: "999"
-    group: "999"
-    mode: "0755"
-  become: yes
-
-- name: Set clickhouse dirs ownership for container (clickhouse UID 101)
-  file:
-    path: "{{ n8n_data_path }}/{{ item }}"
-    state: directory
-    owner: "101"
-    group: "101"
-    mode: "0755"
-  loop:
-    - clickhouse
-    - clickhouse-logs
-  become: yes
-
-- name: Set pgadmin dir ownership for container (pgadmin UID 5050)
-  file:
-    path: "{{ n8n_data_path }}/pgadmin"
-    state: directory
-    owner: "5050"
-    group: "5050"
-    mode: "0755"
-  become: yes
-
 - name: Stop current services
   community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
@@ -169,16 +118,6 @@
     state: link
     owner: "{{ deploy_user }}"
     group: "{{ deploy_user }}"
-
-- name: Ensure shared Docker network exists
-  community.docker.docker_network:
-    name: "{{ shared_docker_network }}"
-    state: present
-
-- name: Ensure n8n default network exists
-  community.docker.docker_network:
-    name: n8n_default
-    state: present
 
 - name: Start new release
   community.docker.docker_compose_v2:

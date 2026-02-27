@@ -217,50 +217,57 @@ docker compose -f docker-compose.dev.yaml down
    docker compose up -d
    ```
 
-### 2.3 Создать внешнюю сеть (один раз, для prod compose)
+### 2.3 Первоначальная настройка сервера (один раз)
 
-На сервере в prod используется `docker-compose.yaml` с сетью `n8n-network`:
+Перед первым деплоем нужно запустить `server-setup.sh`. Он создаёт:
+- системные каталоги (`/srv/www/n8n_production`, `/mnt/data/backups/...`)
+- каталоги данных на Hetzner volume (`/mnt/data/n8n/postgres`, `redis`, `qdrant` и т.д.) с правильными владельцами для контейнеров
+- Docker-сети (`n8n-network`, `n8n_default`)
+
+Требует sudo (запрашивает пароль пользователя `kulibin`):
 
 ```bash
-ssh deploy@<server> "docker network create n8n-network"
-# Если сеть уже есть — ошибку можно проигнорировать.
+cd /home/leemour/Projects/AI/AgentsCourse/n8n_deploy_example/ansible
+./server-setup.sh production
 ```
+
+Этот скрипт безопасно запустить повторно — все задачи идемпотентны.
 
 ### 2.4 Запуск деплоя (Capistrano)
 
-С локальной машины из каталога с Ansible:
+После настройки сервера все последующие деплои выполняются без sudo:
 
 ```bash
 cd /home/leemour/Projects/AI/AgentsCourse/n8n_deploy_example/ansible
 
 # Обычный деплой (быстро: образы не перекачиваются и не пересобираются)
-ansible-playbook -i inventory/hosts.yml playbooks/deploy-capistrano.yml -l production
+./deploy-capistrano.sh production
 
 # После обновления образов или Dockerfile n8n — подтянуть образы и пересобрать:
-ansible-playbook -i inventory/hosts.yml playbooks/deploy-capistrano.yml -l production -e force_pull_build=true
+./deploy-capistrano.sh production -e force_pull_build=true
 ```
 
-**Первый деплой с данными на Hetzner volume (чтобы не потерять текущую БД Postgres):**  
-Если раньше Postgres писал в именованный том Docker, при первом переходе на `N8N_DATA_PATH=/mnt/data/n8n` новый каталог будет пустой — старые данные останутся в старом томе. Чтобы перенести их один раз:
+Что делает playbook:
+- клонирует репозиторий в `releases/<timestamp>`;
+- копирует из `configs/production.env` / `configs/staging.env` в `shared/.env`;
+- делает симлинк `current` на новый релиз;
+- останавливает старые контейнеры (`docker compose down` в `current`);
+- поднимает новые (`docker compose up` из нового `current`);
+- хранит 5 последних релизов, старые удаляет.
+
+Используется **compose-файл из репозитория** (`docker-compose.yaml`).
+
+**Первый деплой с данными на Hetzner volume (перенос существующей БД):**
+
+Если раньше Postgres писал в именованный том Docker, при первом переходе на `N8N_DATA_PATH=/mnt/data/n8n` новый каталог будет пустой. Чтобы перенести данные один раз:
 
 ```bash
 # Узнать имя тома на сервере
 ssh -p 25222 deploy@<server> "docker volume ls | grep postgres"
 
-# Деплой с миграцией (подставьте имя тома из вывода выше, например current_langfuse_postgres_data)
-ansible-playbook -i inventory/hosts.yml playbooks/deploy-capistrano.yml -l production \
-  -e migrate_postgres_to_hetzner=true -e postgres_old_volume_name=current_langfuse_postgres_data
+# Деплой с миграцией (подставьте имя тома из вывода выше)
+./deploy-capistrano.sh production -e migrate_postgres_to_hetzner=true -e postgres_old_volume_name=current_langfuse_postgres_data
 ```
-
-Playbook:
-- клонирует репозиторий в `releases/<timestamp>`;
-- копирует из `configs/production.env` / `configs/staging.env` в `shared/.env`;
-- делает симлинк `current` на новый релиз;
-- останавливает старые контейнеры (`docker compose down` в `current`);
-- при необходимости один раз копирует данные Postgres из старого тома в `/mnt/data/n8n/postgres`;
-- поднимает новые (`docker compose up` из нового `current`).
-
-Используется **compose-файл из репозитория** в `current` (то есть ваш обновлённый `docker-compose.yaml` с postgres, init-dbs.sh, evolution, отдельными пользователями и т.д.).
 
 ### 2.5 После деплоя
 
@@ -285,9 +292,11 @@ Playbook:
 
 | Задача | Команда |
 |--------|--------|
-| Локально: полная очистка и запуск | `docker compose -f docker-compose.dev.yaml down -v` → удалить том postgres при необходимости → `docker compose -f docker-compose.dev.yaml build --no-cache n8n-import` → `docker compose -f docker-compose.dev.yaml up -d` |
+| Локально: полная очистка и запуск | `docker compose -f docker-compose.dev.yaml down -v` → `docker compose -f docker-compose.dev.yaml build --no-cache n8n-import` → `docker compose -f docker-compose.dev.yaml up -d` |
 | Локально: проверка БД и пользователей | `docker compose -f docker-compose.dev.yaml exec postgres psql -U n8n -d n8n_production -c "\l"` и `-c "\du"` |
-| Сервер: деплой | `ansible-playbook -i inventory/hosts.yml playbooks/deploy-capistrano.yml -l production` |
+| Сервер: первоначальная настройка (один раз) | `./ansible/server-setup.sh production` |
+| Сервер: деплой | `./ansible/deploy-capistrano.sh production` |
+| Сервер: деплой с пересборкой образов | `./ansible/deploy-capistrano.sh production -e force_pull_build=true` |
 | Сервер: после деплоя — миграция БД вручную | Подключиться по SSH и выполнить в контейнере postgres `CREATE USER`/`CREATE DATABASE`/`GRANT` как в п. 2.2 вариант A |
 
 Подробности по переменным и секретам — в [SETUP.md](SETUP.md).

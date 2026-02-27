@@ -29,9 +29,9 @@
     group: "{{ deploy_user }}"
   notify: restart n8n
 
-- name: Template N8N environment file
-  template:
-    src: ../templates/n8n.env.j2
+- name: Copy N8N environment file
+  copy:
+    src: "../configs/{{ env_name }}.env"
     dest: "{{ apps_dir }}/n8n/.env"
     mode: '0600'
     owner: "{{ deploy_user }}"
