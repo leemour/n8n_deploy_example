@@ -66,6 +66,7 @@ Docker Network: n8n-network (shared)
 - **[Service Connections](docs/SERVICE_CONNECTIONS.md)** - How to connect to all services (PostgreSQL, pgAdmin, Qdrant, etc.)
 - **[Caddy Multiple Networks](docs/CADDY_MULTIPLE_NETWORKS.md)** - Configuring Caddy for multiple Docker networks
 - **[N8N Microservices Guide](docs/N8N_MICROSERVICES_GUIDE.md)** - Detailed service configuration (Russian)
+- **[N8N Custom Docker Image](docs/N8N_CUSTOM_IMAGE.md)** - Building custom n8n image with community nodes
 
 ### Troubleshooting
 - **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
