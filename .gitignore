@@ -36,6 +36,7 @@ ssh/
 backups/*
 !/backups/.gitkeep
 dumps/
+n8n_backup_*/
 
 # Temporary files
 *.tmp

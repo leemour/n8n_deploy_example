@@ -7,3 +7,5 @@ staging.env
 
 /backups/*
 !/backups/.gitkeep
+
+n8n_backup_*/
