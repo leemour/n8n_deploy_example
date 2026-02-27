@@ -15,15 +15,14 @@
     - "{{ apps_dir }}/shared"
     - "{{ apps_dir }}/shared/backups"
 
-# - name: Create Docker volume directories with correct ownership
-#   file:
-#     path: "{{ item }}"
-#     state: directory
-#     mode: '0755'
-#     owner: "1000"  # Docker container UID
-#     group: "1000"  # Docker container GID
-#   loop:
-#     - "{{ apps_dir }}/shared/n8n_storage"
+- name: Create shared n8n_storage directory with correct ownership
+  file:
+    path: "{{ apps_dir }}/shared/n8n_storage"
+    state: directory
+    mode: '0755'
+    owner: "1000"  # Docker container UID (node user in n8n image)
+    group: "1000"
+  become: yes
 
 - name: Get current timestamp for release
   set_fact:
@@ -81,11 +80,78 @@
     - { name: ".env", owner: "{{ deploy_user }}", group: "{{ deploy_user }}" }
     - { name: "n8n_storage", owner: "1000", group: "1000" }
 
+- name: Ensure Hetzner volume data directories exist
+  file:
+    path: "{{ n8n_data_path }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - postgres
+    - redis
+    - qdrant
+    - pgadmin
+    - evolution_instances
+    - evolution_store
+    - clickhouse
+    - clickhouse-logs
+    - minio
+  become: yes
+
+- name: Set postgres data dir ownership for container (postgres UID 999)
+  file:
+    path: "{{ n8n_data_path }}/postgres"
+    state: directory
+    owner: "999"
+    group: "999"
+    mode: "0755"
+  become: yes
+
+- name: Set clickhouse dirs ownership for container (clickhouse UID 101)
+  file:
+    path: "{{ n8n_data_path }}/{{ item }}"
+    state: directory
+    owner: "101"
+    group: "101"
+    mode: "0755"
+  loop:
+    - clickhouse
+    - clickhouse-logs
+  become: yes
+
 - name: Stop current services
   community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
     state: absent
   ignore_errors: yes
+
+# One-time migration: copy existing Postgres data from old named volume to Hetzner path
+# so the DB is not lost. Run with: -e migrate_postgres_to_hetzner=true -e postgres_old_volume_name=current_langfuse_postgres_data
+# (volume name from: docker volume ls | grep postgres)
+- name: Check if Postgres migration destination is empty
+  stat:
+    path: "{{ n8n_data_path }}/postgres/PG_VERSION"
+  register: pg_dest_has_data
+  when: migrate_postgres_to_hetzner | default(false) | bool
+
+- name: Migrate Postgres data from old volume to Hetzner path (one-time)
+  command: >
+    docker run --rm
+    -v {{ postgres_old_volume_name }}:/from
+    -v {{ n8n_data_path }}/postgres:/to
+    alpine sh -c "cp -a /from/. /to/"
+  when:
+    - migrate_postgres_to_hetzner | default(false) | bool
+    - postgres_old_volume_name is defined
+    - not (pg_dest_has_data.stat.exists | default(false))
+  changed_when: true
+
+- name: Set ownership of migrated Postgres data (postgres UID 999)
+  command: chown -R 999:999 {{ n8n_data_path }}/postgres
+  when:
+    - migrate_postgres_to_hetzner | default(false) | bool
+    - postgres_old_volume_name is defined
+    - not (pg_dest_has_data.stat.exists | default(false))
+  become: yes
 
 - name: Update current symlink
   file:
@@ -95,11 +161,19 @@
     owner: "{{ deploy_user }}"
     group: "{{ deploy_user }}"
 
+- name: Ensure shared Docker network exists
+  community.docker.docker_network:
+    name: "{{ shared_docker_network }}"
+    state: present
+
 - name: Start new release
   community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
     state: present
-    pull: missing
+    # Only pull/rebuild when requested (e.g. after image or Dockerfile update). Default: fast deploy.
+    # To update images: ansible-playbook ... -e force_pull_build=true
+    pull: "{{ 'always' if force_pull_build | default(false) else 'missing' }}"
+    build: "{{ 'always' if force_pull_build | default(false) else 'policy' }}"
 
 # Old releases can contain Docker-created dirs (e.g. pgadmin_data from bind mounts)
 # owned by root or container UIDs; use become so we can remove them.

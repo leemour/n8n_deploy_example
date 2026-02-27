@@ -10,6 +10,18 @@ base_dir: "/srv/www"
 apps_dir: "{{ base_dir }}/n8n_{{ group_names[0] }}"
 proxy_dir: "{{ base_dir }}/proxy"
 backups_dir: "/mnt/data/backups/n8n_{{ group_names[0] }}"
+# Hetzner volume path for DB and service data (must match N8N_DATA_PATH in .env on server)
+n8n_data_path: "/mnt/data/n8n"
+
+# Optional: force pull images and rebuild custom n8n on every deploy (default: false for fast deploys).
+# Set to true when you've updated images or the n8n Dockerfile: -e force_pull_build=true
+# force_pull_build: false
+
+# Optional: one-time migration of Postgres from named volume to Hetzner path.
+# Set when first switching to N8N_DATA_PATH to avoid losing DB:
+#   -e migrate_postgres_to_hetzner=true -e postgres_old_volume_name=current_langfuse_postgres_data
+# Find volume name on server: docker volume ls | grep postgres
+# postgres_old_volume_name: "current_langfuse_postgres_data"
 
 # Backup configuration
 backup_retention_days: 30
