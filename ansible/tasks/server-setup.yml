@@ -29,8 +29,56 @@
     - "{{ backups_dir }}"
 
 - name: Create shared Docker network
-  docker_network:
+  community.docker.docker_network:
     name: "{{ shared_docker_network }}"
     driver: bridge
     ipam_config:
       - subnet: "10.20.0.0/24"
+
+- name: Create n8n default Docker network
+  community.docker.docker_network:
+    name: n8n_default
+    driver: bridge
+
+- name: Ensure Hetzner volume data directories exist
+  file:
+    path: "{{ n8n_data_path }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - postgres
+    - redis
+    - qdrant
+    - pgadmin
+    - evolution_instances
+    - evolution_store
+    - clickhouse
+    - clickhouse-logs
+    - minio
+
+- name: Set postgres data dir ownership for container (postgres UID 999)
+  file:
+    path: "{{ n8n_data_path }}/postgres"
+    state: directory
+    owner: "999"
+    group: "999"
+    mode: "0755"
+
+- name: Set clickhouse dirs ownership for container (clickhouse UID 101)
+  file:
+    path: "{{ n8n_data_path }}/{{ item }}"
+    state: directory
+    owner: "101"
+    group: "101"
+    mode: "0755"
+  loop:
+    - clickhouse
+    - clickhouse-logs
+
+- name: Set pgadmin dir ownership for container (pgadmin UID 5050)
+  file:
+    path: "{{ n8n_data_path }}/pgadmin"
+    state: directory
+    owner: "5050"
+    group: "5050"
+    mode: "0755"

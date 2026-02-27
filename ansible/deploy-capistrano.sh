@@ -4,6 +4,7 @@
 set -e
 
 ENVIRONMENT=${1:-production}
+shift 1 2>/dev/null || true
 ANSIBLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "🚀 Deploying N8N (Capistrano-style) to $ENVIRONMENT environment..."
@@ -34,7 +35,8 @@ echo "Running Capistrano-style deployment..."
 ansible-playbook \
     -i "$ANSIBLE_DIR/inventory/hosts.yml" \
     --limit "$ENVIRONMENT" \
-    "$ANSIBLE_DIR/playbooks/deploy-capistrano.yml"
+    "$ANSIBLE_DIR/playbooks/deploy-capistrano.yml" \
+    "$@"
 
 echo "✅ Deployment completed!"
 echo ""
