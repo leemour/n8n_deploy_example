@@ -33,6 +33,7 @@ x-n8n: &service-n8n
     NODE_FUNCTION_ALLOW_EXTERNAL: "*"
     N8N_COMMUNITY_PACKAGE_ENABLED: true
     N8N_CUSTOM_EXTENSIONS: /home/node/custom-nodes
+    NODE_PATH: /usr/local/lib/node_modules
     N8N_HIRING_BANNER_ENABLED: false
     N8N_TEMPLATES_ENABLED: true
     N8N_PUBLIC_API_DISABLED: false

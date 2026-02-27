@@ -49,11 +49,15 @@ RUN mkdir -p /home/node/custom-nodes && \
     @tavily/n8n-nodes-tavily && \
     chown -R node:node /home/node/custom-nodes
 
-# 3. Install NPM packages for use inside Code node
-RUN npm install -g \
-    zod pino lodash papaparse fast-xml-parser turndown cheerio sanitize-html \
+# 3. Install NPM packages into the task runner's node_modules so Code node can require() them
+# (zod, lodash, uuid, cheerio, pino are already n8n deps — skip them)
+RUN RUNNER_DIR=$(find /usr/local/lib/node_modules/n8n/node_modules/.pnpm -maxdepth 5 -type d -path "*/@n8n/task-runner" | head -1) && \
+    echo "Task runner found at: $RUNNER_DIR" && \
+    cd "$RUNNER_DIR" && \
+    npm install --no-save \
+    papaparse fast-xml-parser turndown sanitize-html \
     jsonwebtoken bcrypt qrcode sharp tiktoken exceljs pdf-lib adm-zip form-data \
-    uuid libphonenumber-js handlebars
+    libphonenumber-js
 
 # 4. Set paths for Puppeteer to use the system Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
