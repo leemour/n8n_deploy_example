@@ -8,10 +8,8 @@ volumes:
 
 networks:
   default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 10.25.0.0/24
+    name: n8n_default
+    external: true
   {{ shared_docker_network }}:
     external: true
 
@@ -130,15 +128,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      EVOLUTION_DB_USER: ${EVOLUTION_DB_USER:-evolution_user}
+      EVOLUTION_DB_USER: ${EVOLUTION_DB_USER:-evolution_api}
       EVOLUTION_DB_PASSWORD: ${EVOLUTION_DB_PASSWORD}
-      EVOLUTION_DB_NAME: ${EVOLUTION_DB_NAME:-evolution}
-      LANGFUSE_DB_USER: ${LANGFUSE_DB_USER:-langfuse_user}
+      EVOLUTION_DB_NAME: ${EVOLUTION_DB_NAME:-evolution_api}
+      LANGFUSE_DB_USER: ${LANGFUSE_DB_USER:-langfuse}
       LANGFUSE_DB_PASSWORD: ${LANGFUSE_DB_PASSWORD}
       LANGFUSE_DB_NAME: ${LANGFUSE_DB_NAME:-langfuse}
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
-      - ./init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
+      - ./scripts/db/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
 {% if resource_limits is defined %}
     deploy:
       resources:

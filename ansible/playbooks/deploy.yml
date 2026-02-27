@@ -5,6 +5,9 @@
   vars_files:
     - ../vars/secrets.yml
 
+  handlers:
+    - import_tasks: ../handlers/main.yml
+
   tasks:
     - name: Include server setup tasks
       include_tasks: ../tasks/server-setup.yml

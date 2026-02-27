@@ -1,9 +1,7 @@
 networks:
   default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 10.25.0.0/24
+    name: n8n_default
+    external: true
   n8n-network:
     external: true
 

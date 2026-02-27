@@ -46,6 +46,16 @@
     owner: "{{ deploy_user }}"
     group: "{{ deploy_user }}"
 
+- name: Ensure shared Docker network exists
+  community.docker.docker_network:
+    name: "{{ shared_docker_network }}"
+    state: present
+
+- name: Ensure n8n default network exists
+  community.docker.docker_network:
+    name: n8n_default
+    state: present
+
 - name: Deploy N8N stack
   community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/n8n"
