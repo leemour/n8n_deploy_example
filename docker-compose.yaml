@@ -112,9 +112,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      EVOLUTION_DB_USER: ${EVOLUTION_DB_USER}
+      EVOLUTION_DB_PASSWORD: ${EVOLUTION_DB_PASSWORD}
+      EVOLUTION_DB_NAME: ${EVOLUTION_DB_NAME}
+      LANGFUSE_DB_USER: ${LANGFUSE_DB_USER}
+      LANGFUSE_DB_PASSWORD: ${LANGFUSE_DB_PASSWORD}
+      LANGFUSE_DB_NAME: ${LANGFUSE_DB_NAME}
     volumes:
       - ${N8N_DATA_PATH:-/mnt/data/n8n}/postgres:/var/lib/postgresql/data
-      - ./init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
+      - ./scripts/db/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
 
   redis:
     container_name: redis
@@ -197,7 +203,7 @@ services:
       clickhouse:
         condition: service_healthy
     environment: &langfuse-worker-env
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/langfuse
+      DATABASE_URL: postgresql://${LANGFUSE_DB_USER}:${LANGFUSE_DB_PASSWORD}@${POSTGRES_HOST}:5432/${LANGFUSE_DB_NAME}
       SALT: ${LANGFUSE_SALT}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
@@ -315,7 +321,7 @@ services:
 
       # Connection to DB and Cache (use internal container names)
       - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://evo_user:evo_pass@postgres:5432/evolution?schema=public
+      - DATABASE_CONNECTION_URI=postgresql://${EVOLUTION_DB_USER}:${EVOLUTION_DB_PASSWORD}@postgres:5432/${EVOLUTION_DB_NAME}?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
       - CACHE_REDIS_ENABLED=true
       - CACHE_REDIS_URI=redis://redis:6379/6

@@ -118,6 +118,15 @@
     - clickhouse-logs
   become: yes
 
+- name: Set pgadmin dir ownership for container (pgadmin UID 5050)
+  file:
+    path: "{{ n8n_data_path }}/pgadmin"
+    state: directory
+    owner: "5050"
+    group: "5050"
+    mode: "0755"
+  become: yes
+
 - name: Stop current services
   community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"
