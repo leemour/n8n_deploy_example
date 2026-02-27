@@ -25,9 +25,9 @@ RUN set -ex && \
     make \
     g++
 
-# 2. Install Community nodes in the correct location
-RUN mkdir -p /home/node/.n8n/nodes && \
-    cd /home/node/.n8n/nodes && \
+# 2. Install Community nodes outside the mounted volume so they survive bind mounts
+RUN mkdir -p /home/node/custom-nodes && \
+    cd /home/node/custom-nodes && \
     npm init -y && \
     npm install --legacy-peer-deps \
     n8n-nodes-evolution-api \
@@ -47,7 +47,7 @@ RUN mkdir -p /home/node/.n8n/nodes && \
     @cloudconvert/n8n-nodes-cloudconvert \
     @blotato/n8n-nodes-blotato \
     @tavily/n8n-nodes-tavily && \
-    chown -R node:node /home/node/.n8n
+    chown -R node:node /home/node/custom-nodes
 
 # 3. Install NPM packages for use inside Code node
 RUN npm install -g \
