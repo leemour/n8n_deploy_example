@@ -111,6 +111,15 @@
     - not (pg_dest_has_data.stat.exists | default(false))
   become: yes
 
+- name: Set redis data dir ownership (valkey UID 999)
+  file:
+    path: "{{ n8n_data_path }}/redis"
+    state: directory
+    owner: "999"
+    group: "999"
+    mode: "0755"
+  become: yes
+
 - name: Update current symlink
   file:
     src: "{{ release_path }}"
