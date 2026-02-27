@@ -175,6 +175,11 @@
     name: "{{ shared_docker_network }}"
     state: present
 
+- name: Ensure n8n default network exists
+  community.docker.docker_network:
+    name: n8n_default
+    state: present
+
 - name: Start new release
   community.docker.docker_compose_v2:
     project_src: "{{ apps_dir }}/current"

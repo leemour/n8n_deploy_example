@@ -3,20 +3,20 @@
     email {{ letsencrypt_email }}
 }
 
-# Production domains (openorbit.pro)
-n8n.openorbit.pro {
+# Production domains
+n8n.{{ server_domain }} {
     reverse_proxy n8n:5678
 }
 
-qdrant.openorbit.pro {
+qdrant.{{ server_domain }} {
     reverse_proxy qdrant:6333
 }
 
-langfuse.openorbit.pro {
+langfuse.{{ server_domain }} {
     reverse_proxy langfuse-web:3000
 }
 
-pgadmin.openorbit.pro {
+pgadmin.{{ server_domain }} {
     reverse_proxy pgadmin:80 {
         header_up Host {host}
         header_up X-Real-IP {remote}
@@ -28,24 +28,24 @@ pgadmin.openorbit.pro {
 }
 
 # pgWeb (host systemd service)
-pgweb.openorbit.pro {
+pgweb.{{ server_domain }} {
     reverse_proxy host.docker.internal:8081
 }
 
-# Staging domains (staging.openorbit.pro)
-n8n.staging.openorbit.pro {
+# Staging domains
+n8n-staging.{{ server_domain }} {
     reverse_proxy n8n:5678
 }
 
-qdrant.staging.openorbit.pro {
+qdrant-staging.{{ server_domain }} {
     reverse_proxy qdrant:6333
 }
 
-langfuse.staging.openorbit.pro {
+langfuse-staging.{{ server_domain }} {
     reverse_proxy langfuse-web:3000
 }
 
-pgadmin.staging.openorbit.pro {
+pgadmin-staging.{{ server_domain }} {
     reverse_proxy pgadmin:80 {
         header_up Host {host}
         header_up X-Real-IP {remote}
@@ -56,7 +56,7 @@ pgadmin.staging.openorbit.pro {
     }
 }
 
-pgweb.staging.openorbit.pro {
+pgweb-staging.{{ server_domain }} {
     reverse_proxy host.docker.internal:8081
 }
 
