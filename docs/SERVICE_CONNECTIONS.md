@@ -183,7 +183,7 @@ const crawlRequest = {
 **Purpose**: Web-based PostgreSQL administration and development platform
 
 **Web UI Access**:
-- **URL**: `https://pgadmin.openorbit.pro` (external via Caddy)
+- **URL**: `https://pgadmin.neirox.app` (external via Caddy)
 - **Email**: Value from `PGADMIN_DEFAULT_EMAIL` (default: `admin@openorbit.pro`)
 - **Password**: Value from `PGADMIN_DEFAULT_PASSWORD` in `.env`
 

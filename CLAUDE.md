@@ -1,7 +1,7 @@
 # N8N Production Deployment — Claude Instructions
 
 ## Project Overview
-Real production system deploying n8n workflow automation to a Hetzner VPS (openorbit.pro).
+Real production system deploying n8n workflow automation to a Hetzner VPS (neirox.app).
 Also serves as an AI Agents Course example demonstrating production-grade deployment patterns.
 
 ## Architecture
@@ -17,7 +17,7 @@ Also serves as an AI Agents Course example demonstrating production-grade deploy
 - Host: `142.132.239.135`, SSH port `25222`
 - User: `deploy` (sudo not required for capistrano-style deployment)
 - Sudo user: `kulibin`
-- Domains: `openorbit.pro` (production), `staging.openorbit.pro` (staging)
+- Domains: `neirox.app` (production), `staging.neirox.app` (staging)
 
 ## Key Local Paths
 | Path | Purpose |
