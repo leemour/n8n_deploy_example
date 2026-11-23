@@ -32,13 +32,13 @@ These are real commands used from a **local machine** to backup a remote n8n ins
 
 ```bash
 # From project root on your machine (port 25222 in this example)
-scp -P 25222 ./scripts/db/backup-n8n.sh deploy@ssh.openorbit.pro:/srv/www/n8n_production/current/scripts/db
+scp -P 25222 ./scripts/db/backup-n8n.sh deploy@142.132.239.135:/srv/www/n8n_production/current/scripts/db
 ```
 
 **2. SSH to the server and run the script**
 
 ```bash
-ssh -p 25222 deploy@ssh.openorbit.pro
+ssh -p 25222 deploy@142.132.239.135
 cd /srv/www/n8n_production/current
 ./scripts/db/backup-n8n.sh
 ```
@@ -47,7 +47,7 @@ cd /srv/www/n8n_production/current
 
 ```bash
 # Create local backups dir if needed: mkdir -p backups
-scp -P 25222 deploy@ssh.openorbit.pro:/srv/www/n8n_production/current/n8n_backup_20260224_232947.tar.gz ./backups/n8n_backup_20260224_232947.tar.gz
+scp -P 25222 deploy@142.132.239.135:/srv/www/n8n_production/current/n8n_backup_20260224_232947.tar.gz ./backups/n8n_backup_20260224_232947.tar.gz
 ```
 
 Use the actual `n8n_backup_YYYYMMDD_HHMMSS.tar.gz` filename produced by the script in step 2.
@@ -59,7 +59,7 @@ Use this when you want only a database dump (e.g. for inspection or one-off migr
 **1. SSH with port forwarding (DB on server is 5433 → local 5434)**
 
 ```bash
-ssh -L 5434:localhost:5433 -p 25222 deploy@ssh.openorbit.pro
+ssh -L 5434:localhost:5433 -p 25222 deploy@142.132.239.135
 ```
 
 Leave this session open (or run the next commands in another terminal while the tunnel is up).

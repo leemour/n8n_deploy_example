@@ -230,7 +230,7 @@ curl -I http://n8n:5678  # From global-caddy container
 docker exec global-caddy curl -I http://n8n:5678
 
 # Check external access
-curl -I https://n8n.openorbit.pro
+curl -I https://n8n.neirox.app
 ```
 
 ---

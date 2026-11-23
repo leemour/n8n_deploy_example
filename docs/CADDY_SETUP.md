@@ -48,29 +48,29 @@ Location: `/srv/www/proxy/Caddyfile`
     email leemour@gmail.com
 }
 
-# Production domains (openorbit.pro)
-n8n.openorbit.pro {
+# Production domains (neirox.app)
+n8n.neirox.app {
     reverse_proxy n8n:5678
 }
 
-qdrant.openorbit.pro {
+qdrant.neirox.app {
     reverse_proxy qdrant:6333
 }
 
-langfuse.openorbit.pro {
+langfuse.neirox.app {
     reverse_proxy langfuse-web:3000
 }
 
-# Staging domains (staging.openorbit.pro)
-n8n.staging.openorbit.pro {
+# Staging domains (staging.neirox.app)
+n8n.staging.neirox.app {
     reverse_proxy n8n:5678
 }
 
-qdrant.staging.openorbit.pro {
+qdrant.staging.neirox.app {
     reverse_proxy qdrant:6333
 }
 
-langfuse.staging.openorbit.pro {
+langfuse.staging.neirox.app {
     reverse_proxy langfuse-web:3000
 }
 
@@ -185,8 +185,8 @@ Certificates are stored in Docker volume:
 
 ```bash
 # Check certificate expiration
-echo | openssl s_client -servername n8n.openorbit.pro \
-  -connect n8n.openorbit.pro:443 2>/dev/null | \
+echo | openssl s_client -servername n8n.neirox.app \
+  -connect n8n.neirox.app:443 2>/dev/null | \
   openssl x509 -noout -dates
 
 # View Caddy's certificate info
@@ -320,7 +320,7 @@ docker exec global-caddy caddy reload --config /etc/caddy/Caddyfile
 ### Add Custom Headers
 
 ```caddy
-n8n.openorbit.pro {
+n8n.neirox.app {
     reverse_proxy n8n:5678
     
     header {
@@ -351,7 +351,7 @@ docker exec global-caddy caddy hash-password --plaintext 'your-password'
 ### Add Rate Limiting
 
 ```caddy
-n8n.openorbit.pro {
+n8n.neirox.app {
     rate_limit {
         zone n8n {
             key {remote_host}
@@ -366,7 +366,7 @@ n8n.openorbit.pro {
 ### Add Access Logging
 
 ```caddy
-n8n.openorbit.pro {
+n8n.neirox.app {
     log {
         output file /var/log/caddy/n8n-access.log {
             roll_size 100mb
